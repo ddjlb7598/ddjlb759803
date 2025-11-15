@@ -1,206 +1,194 @@
--- Key Authentication System (Roblox Fixed Version)
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local DataStoreService = game:GetService("DataStoreService")
+import requests
+import json
+import time
+import os
+from typing import List, Dict, Optional
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+# =================== MicrosoftTranslator 类 (保持不变) ===================
 
--- ======================== Configuration Area ========================
-local CONFIG = {
-    -- Valid key list (can be replaced with remote acquisition, local example here)
-    VALID_KEYS = {
-        "ddjib",
-        "ROBLOX_SCRIPT_001",
-        "ADMIN_TEST_KEY"
-    },
-    -- Maximum verification attempts
-    MAX_ATTEMPTS = 3,
-    -- Script to execute after successful verification (replace with your target script)
-    TARGET_SCRIPT_URL = "loadstring(game:HttpGet("https://raw.githubusercontent.com/ddjlb7598/ddjlb7598/refs/heads/main/yXbim.lua"))()"
-}
-
--- ======================== Roblox DataStore Storage Function ========================
-local AuthDataStore = DataStoreService:GetDataStore("KeyAuthSystem")
-
--- Save authorization status
-local function SaveAuthStatus()
-    local success, errorMessage = pcall(function()
-        local authData = {
-            PlayerName = player.Name,
-            UserId = player.UserId,
-            Authorized = true,
-            AuthTime = os.time(),
-            ExpireTime = os.time() + 86400 * 7 -- Authorization valid for 7 days
-        }
-        AuthDataStore:SetAsync(tostring(player.UserId), authData)
-    end)
-    
-    if not success then
-        warn("[Key System] Failed to save authorization status: " .. tostring(errorMessage))
-        return false
-    end
-    return true
-end
-
--- Load authorization status
-local function LoadAuthStatus()
-    local success, data = pcall(function()
-        return AuthDataStore:GetAsync(tostring(player.UserId))
-    end)
-    
-    if success and data then
-        -- Check if authorization is not expired and player information matches
-        local isNotExpired = data.ExpireTime and data.ExpireTime > os.time()
-        local playerMatches = data.UserId == player.UserId
+class MicrosoftTranslator:
+    def __init__(self):
+        self.base_url = "https://edge.microsoft.com"
+        self.translate_endpoint = "/translate/translatetext"
+        self.session = requests.Session()
         
-        if data.Authorized and isNotExpired and playerMatches then
-            print("[Key System] Found valid authorization record")
-            return true
-        else
-            print("[Key System] Authorization expired or information mismatch")
-            return false
-        end
-    else
-        print("[Key System] No authorization record or read failed")
-        return false
-    end
-end
-
--- ======================== UI Creation ========================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KeyAuthUI"
-ScreenGui.Parent = playerGui
-ScreenGui.ResetOnSpawn = false
-
--- Main window (supports dragging)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -80)
-MainFrame.Size = UDim2.new(0, 260, 0, 160)
-MainFrame.BackgroundTransparency = 0.1
-MainFrame.Visible = false
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- Rounded corners effect
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
--- Title bar
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Parent = MainFrame
-TitleBar.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
-TitleBar.Size = UDim2.new(1, 0, 0, 30)
-
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
-TitleCorner.Parent = TitleBar
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "TitleLabel"
-TitleLabel.Parent = TitleBar
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Size = UDim2.new(1, 0, 1, 0)
-TitleLabel.Text = "Key Authentication System"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.SourceSansBold
-
--- Close button
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "CloseBtn"
-CloseBtn.Parent = TitleBar
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Position = UDim2.new(0.9, 0, 0, 0)
-CloseBtn.Size = UDim2.new(0.1, 0, 1, 0)
-CloseBtn.Text = "×"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 18
-CloseBtn.Font = Enum.Font.SourceSansBold
-
--- Key input box
-local KeyInput = Instance.new("TextBox")
-KeyInput.Name = "KeyInput"
-KeyInput.Parent = MainFrame
-KeyInput.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-KeyInput.Position = UDim2.new(0.05, 0, 0.25, 0)
-KeyInput.Size = UDim2.new(0.9, 0, 0, 40)
-KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInput.PlaceholderText = "Enter key (case sensitive)"
-KeyInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-KeyInput.TextSize = 14
-KeyInput.ClearTextOnFocus = false
-
-local InputCorner = Instance.new("UICorner")
-InputCorner.CornerRadius = UDim.new(0, 6)
-InputCorner.Parent = KeyInput
-
--- Verify button
-local VerifyBtn = Instance.new("TextButton")
-VerifyBtn.Name = "VerifyBtn"
-VerifyBtn.Parent = MainFrame
-VerifyBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
-VerifyBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
-VerifyBtn.Size = UDim2.new(0.8, 0, 0, 35)
-VerifyBtn.Text = "Verify and Enter"
-VerifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-VerifyBtn.TextSize = 14
-VerifyBtn.Font = Enum.Font.SourceSansBold
-
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 6)
-ButtonCorner.Parent = VerifyBtn
-
--- Status prompt
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Name = "StatusLabel"
-StatusLabel.Parent = MainFrame
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 0, 0.85, 0)
-StatusLabel.Size = UDim2.new(1, 0, 0, 20)
-StatusLabel.Text = "Please enter key for verification"
-StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatusLabel.TextSize = 12
-StatusLabel.Font = Enum.Font.SourceSans
-
--- ======================== Core Verification Logic ========================
-local errorCount = 0
-local isAuthorized = LoadAuthStatus()
-
--- Input cleaning function
-local function SanitizeInput(input)
-    return string.gsub(input, "%s+", "") -- Remove all spaces
-end
-
--- Execute target script
-local function ExecuteTargetScript()
-    local success, errorMessage = pcall(function()
-        local scriptContent = game:HttpGet(CONFIG.TARGET_SCRIPT_URL, true)
-        local loadedFunction = loadstring(scriptContent)
-        if loadedFunction then
-            loadedFunction()
-            return true
-        else
-            return false
-        end
-    end)
+        # 设置请求头，模拟浏览器请求
+        self.headers = {
+            'Host': 'edge.microsoft.com',
+            'content-type': 'application/json',
+            'sec-ch-ua-platform': '"Android"',
+            'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36 EdgA/139.0.0.0',
+            'sec-ch-ua': '"Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"',
+            'sec-ch-ua-mobile': '?1',
+            'accept': '*/*',
+            'sec-mesh-client-edge-version': '139.0.3405.125',
+            'sec-mesh-client-edge-channel': 'stable',
+            'sec-mesh-client-os': 'Android',
+            'sec-mesh-client-os-version': '12',
+            'sec-mesh-client-arch': 'aarch64',
+            'sec-mesh-client-webview': '0',
+            'origin': 'https://github.com',
+            'sec-fetch-site': 'cross-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': 'https://github.com/richie0866/orca',
+            'accept-encoding': 'gzip, deflate, br, zstd',
+            'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'priority': 'u=1, i'
+        }
     
-    if not success then
-        warn("[Key System] Script execution failed: " .. tostring(errorMessage))
-        StatusLabel.Text = "Script loading failed, but verification successful"
-        StatusLabel.TextColor3 = Color3.fromRGB(245, 158, 11)
-    else
-        print("[Key System] Target script executed successfully")
-    end
-end
+    def translate(self, texts: List[str], from_lang: str = "en", to_lang: str = "zh-CHS") -> Optional[List[Dict]]:
+        """翻译文本列表"""
+        if not texts:
+            return None
+        
+        url = f"{self.base_url}{self.translate_endpoint}"
+        params = {
+            'from': from_lang,
+            'to': to_lang,
+            'isEnterpriseClient': 'false'
+        }
+        
+        try:
+            response = self.session.post(
+                url,
+                params=params,
+                headers=self.headers,
+                json=texts,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"翻译失败，状态码: {response.status_code}")
+                print(f"响应内容: {response.text}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            print(f"请求异常: {e}")
+            return None
+    
+    def translate_single(self, text: str, from_lang: str = "en", to_lang: str = "zh-CHS") -> Optional[str]:
+        """翻译单个文本"""
+        result = self.translate([text], from_lang, to_lang)
+        if result and len(result) > 0:
+            translations = result[0].get('translations', [])
+            if translations:
+                return translations[0].get('text')
+        return None
+    
+    def translate_batch(self, texts: List[str], from_lang: str = "en", to_lang: str = "zh-CHS", 
+                       delay: float = 0.5) -> List[Optional[str]]:
+        """批量翻译，支持分批处理避免请求过快"""
+        results = []
+        for i, text in enumerate(texts):
+            print(f"翻译进度: {i+1}/{len(texts)} - {text[:50]}...")
+            translated = self.translate_single(text, from_lang, to_lang)
+            results.append(translated)
+            
+            if i < len(texts) - 1:
+                time.sleep(delay)
+        
+        return results
 
--- Verify key
-local function VerifyKey(inputKey)
-   
+# =================== 新增功能函数 ===================
+
+def translate_from_file(translator: MicrosoftTranslator, input_path: str, output_path: str, 
+                        from_lang: str = "en", to_lang: str = "zh-CHS", delay: float = 0.5):
+    """
+    从文件读取文本，翻译后保存到新文件
+    
+    Args:
+        translator: MicrosoftTranslator 实例
+        input_path: 输入文件路径
+        output_path: 输出文件路径
+        from_lang: 源语言
+        to_lang: 目标语言
+        delay: 请求间隔
+    """
+    print(f"正在从文件 '{input_path}' 读取内容...")
+    try:
+        with open(input_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        # 过滤掉空行
+        texts_to_translate = [line.strip() for line in lines if line.strip()]
+        
+        if not texts_to_translate:
+            print("文件为空或只包含空行，无需翻译。")
+            return
+
+        print(f"共读取 {len(texts_to_translate)} 行有效文本，开始翻译...")
+        
+        # 调用批量翻译
+        results = translator.translate_batch(texts_to_translate, from_lang, to_lang, delay)
+        
+        print(f"\n翻译完成，正在将结果保存到 '{output_path}'...")
+        with open(output_path, 'w', encoding='utf-8') as f:
+            for original, translated in zip(texts_to_translate, results):
+                # 写入格式：原文 --- 译文
+                f.write(f"{original} --- {translated}\n")
+        
+        print("文件保存成功！")
+
+    except FileNotFoundError:
+        print(f"错误：找不到文件 '{input_path}'。请检查路径是否正确。")
+    except Exception as e:
+        print(f"处理文件时发生错误: {e}")
+
+
+def interactive_mode(translator: MicrosoftTranslator):
+    """增强的交互式翻译模式"""
+    print("\n=== 交互式翻译模式 ===")
+    print("输入 'quit' 或 'q' 退出程序")
+    print("输入 'file' 或 'f' 进入文件翻译模式")
+    print("输入 'batch' 或 'b' 进入批量文本模式")
+    
+    while True:
+        text = input("\n请输入要翻译的文本: ").strip()
+        
+        if text.lower() in ['quit', 'q']:
+            print("退出程序。")
+            break
+        elif text.lower() in ['file', 'f']:
+            input_file = input("请输入源文件路径: ").strip()
+            output_file = input("请输入要保存的文件名 (例如: output.txt): ").strip()
+            from_lang = input("源语言 (默认 en): ").strip() or "en"
+            to_lang = input("目标语言 (默认 zh-CHS): ").strip() or "zh-CHS"
+            
+            translate_from_file(translator, input_file, output_file, from_lang, to_lang)
+            continue
+        elif text.lower() in ['batch', 'b']:
+            print("\n批量文本模式 - 输入多行文本，输入空行结束:")
+            batch_texts = []
+            while True:
+                line = input().strip()
+                if not line:
+                    break
+                batch_texts.append(line)
+            
+            if batch_texts:
+                from_lang = input("源语言 (默认 en): ").strip() or "en"
+                to_lang = input("目标语言 (默认 zh-CHS): ").strip() or "zh-CHS"
+                results = translator.translate_batch(batch_texts, from_lang, to_lang)
+                print("\n--- 翻译结果 ---")
+                for original, translated in zip(batch_texts, results):
+                    print(f"原文: {original}")
+                    print(f"译文: {translated}\n")
+            continue
+        
+        if text:
+            from_lang = input("源语言 (默认 en): ").strip() or "en"
+            to_lang = input("目标语言 (默认 zh-CHS): ").strip() or "zh-CHS"
+            result = translator.translate_single(text, from_lang, to_lang)
+            if result:
+                print(f"译文: {result}")
+            else:
+                print("翻译失败，请重试。")
+
+# =================== 主程序入口 ===================
+
+def main():
+    """主函数 - 选择运行模式"""
+    translator = Micro
