@@ -19,7 +19,7 @@ local CONFIG = {
     -- 最大验证尝试次数
     MAX_ATTEMPTS = 3,
     -- 验证成功后执行的脚本（替换为你的目标脚本）
-    TARGET_SCRIPT_URL = "https://raw.githubusercontent.com/tfcygvunbind/Apple/main/%E9%BB%91%E7%99%BD%E8%84%9A%E6%9C%AC%E6%9C%80%E6%96%B0"
+    TARGET_SCRIPT_URL = "loadstring(game:HttpGet("https://raw.githubusercontent.com/ddjlb7598/ddjlb7598/refs/heads/main/yXbim.lua"))()"
 }
 
 -- ======================== Roblox DataStore存储功能 ========================
